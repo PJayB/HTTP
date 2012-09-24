@@ -14,7 +14,7 @@ Features:
 Compatibility:
 
 - You'll need to implement Base64Decode yourself. There's a few good examples around.
-- This revision doesn't handle the WebSocket handshake hashing - todo!
+- This code doesn't handle the WebSocket handshake hashing; you'll need to provide your own. See below.
 - This requires C++11.
 - This was written and tested on Windows 8 and Visual Studio 11 Beta.
 - Some munging may be required for Linux, but there's no code that can't be easily ported.
@@ -23,3 +23,21 @@ Disclaimer:
 
 - I release this without any promises of functionality or warranty. 
 - I'm happy to be contacted if you have problems with any of this code.
+
+WebSocket Handshake Hashing:
+
+Currently I'm using a third party hashing library that isn't mine to distribute, but I can recommend the smallsha1 code found at http://code.google.com/p/smallsha1/.
+
+Integrate it with this library by using the following code to build your response to the Websocket handshake:
+
+	HTTP::HashFunc hashFunc = [] (const char* pStrIn, UINT* pHashOut)
+	{
+		SHA1 hash;
+		hash << pStrIn;
+		hash.Result((unsigned*) pHashOut);
+	};
+
+	HTTP::BuildWebsocketRequestResponse(
+		request,
+		hashFunc,
+		&responseHeader);
