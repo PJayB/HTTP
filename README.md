@@ -15,7 +15,7 @@ Features:
 
 Compatibility:
 
-- You'll need to implement Base64Decode yourself. There's a few good examples around.
+- The Base64 encoding and decoding was taken from http://www.adp-gmbh.ch/win/misc/webserver.html
 - This code doesn't handle the WebSocket handshake hashing; you'll need to provide your own. See below.
 - This requires C++11.
 - This was written and tested on Windows 8 and Visual Studio 11 Beta.
