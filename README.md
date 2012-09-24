@@ -1,7 +1,7 @@
 HTTP
 ====
 
-This is a library I wrote recently for interpreting HTML requests from browsers and constructing responses.
+This is a library I wrote recently for interpreting HTML requests from browsers and constructing responses. If you use this, please credit me accordingly.
 
 Features:
 
@@ -23,6 +23,7 @@ Disclaimer:
 
 - I release this without any promises of functionality or warranty. 
 - I'm happy to be contacted if you have problems with any of this code.
+- This code is in no way affiliated with or edorsed by Microsoft.
 
 WebSocket Handshake Hashing:
 
