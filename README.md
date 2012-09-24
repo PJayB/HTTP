@@ -3,6 +3,8 @@ HTTP
 
 This is a library I wrote recently for interpreting HTML requests from browsers and constructing responses. If you use this, please credit me accordingly.
 
+This is still a work in progress. Feedback is welcome.
+
 Features:
 
 - Parsing of HTTP requests from a browser.
