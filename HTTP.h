@@ -2,6 +2,7 @@
 
 #include <string>
 #include <map>
+#include <functional>
 
 namespace HTTP
 {
@@ -165,16 +166,6 @@ private:
 	struct REQUEST_DATA* m_pData;
 };
 
-struct RESPONSE_HEADER_DESC
-{
-	PROTOCOL Protocol;		// The HTTP protocol to use
-	RESPONSE_CODE Code;		// The response code
-	METHOD Method;			// For RESPONSE_METHOD only.
-	LPCSTR RedirectURI;		// Must specify redirect code to use this
-	AUTH_MODE AuthMode;		// Set to non-None to request credentials
-	LPCSTR AuthRealm;		// Description of the authorization realm
-};
-
 //
 // This is used to build a stream for sending back data
 // to the browser.
@@ -183,8 +174,7 @@ class ResponseHeaderBuilder
 {
 public:
 
-	ResponseHeaderBuilder(
-		_In_ const RESPONSE_HEADER_DESC* pDesc);
+	ResponseHeaderBuilder();
 
 	ResponseHeaderBuilder& 
 	AddKey(
@@ -209,14 +199,15 @@ public:
 		_In_z_ LPCSTR MimeType,
 		_In_z_ LPCSTR Encoding);
 
+	PROTOCOL Protocol;		// The HTTP protocol to use
+	RESPONSE_CODE Code;		// The response code
+	METHOD Method;			// For RESPONSE_METHOD only.
+	String RedirectURI;		// Must specify redirect code to use this
+	AUTH_MODE AuthMode;		// Set to non-None to request credentials
+	String AuthRealm;		// Description of the authorization realm
+
 private:
 
-	PROTOCOL m_Protocol;	
-	RESPONSE_CODE m_Code;	
-	METHOD m_Method;		
-	AUTH_MODE m_AuthMode;
-	String m_AuthRealm;
-	String m_RedirectURI;
 	StringTable m_ExtraLines;
 };
 
@@ -350,9 +341,25 @@ Base64Decode(
 // WebSockets API
 //
 
+enum WS_RESPONSE_RESULT
+{
+	WS_RESPONSE_OK,
+	WS_RESPONSE_MISSING_KEY
+};
+
 // Returns true if the header looks like a Websocket request
 bool IsWebsocketRequest(
 	_In_ const RequestHeader& req);
+
+// This takes in a string and generates a 160-bit SHA1 hash, returned through
+// 5 UINTs.
+typedef std::function<void (const char*, UINT*)> HashFunc;
+
+WS_RESPONSE_RESULT
+BuildWebsocketRequestResponse(
+	_In_ const HTTP::RequestHeader& request,
+	_In_ HashFunc HashFunction,
+	_Out_ ResponseHeaderBuilder* responseBuilder);
 
 enum WS_FRAME_RESULT
 {

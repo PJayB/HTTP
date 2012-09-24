@@ -4,11 +4,6 @@
 namespace HTTP
 {
 
-bool IsWebsocketRequest(_In_ const RequestHeader& req)
-{
-	return req.Header().find("Sec-WebSocket-Key") != std::end(req.Header());
-}
-
 BYTE AllBitsSet(BYTE byte, BYTE bit)
 {
 	return (byte & bit) == bit;
@@ -31,6 +26,49 @@ template<class T> T ByteSwap(T original)
 		b.b[sizeof(T)-i-1] = a.b[i];
 
 	return b.t;
+}
+
+bool IsWebsocketRequest(_In_ const RequestHeader& req)
+{
+	return req.Header().find("Sec-WebSocket-Key") != std::end(req.Header());
+}
+
+WS_RESPONSE_RESULT
+BuildWebsocketRequestResponse(
+	_In_ const HTTP::RequestHeader& request,
+	_In_ HashFunc HashFunction,
+	_Out_ ResponseHeaderBuilder* responseHeader)
+{
+	String wsKey = request.Header().find("Sec-WebSocket-Key")->second;
+	if (!wsKey.size())
+		return WS_RESPONSE_MISSING_KEY;
+
+	wsKey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+	/*
+	SHA1 hash;
+	hash << wsKey.c_str();
+	hash.Result(wsKeyHash);
+	*/
+
+	UINT wsKeyHash[5] = {0, 0, 0, 0, 0};
+	HashFunction(wsKey.c_str(), wsKeyHash);
+
+	for (int i = 0; i < 5; ++i) 
+		wsKeyHash[i] = ByteSwap(wsKeyHash[i]);
+
+	wsKey = Base64Encode(wsKeyHash, sizeof(unsigned) * 5);
+
+	responseHeader->Protocol = HTTP::PROTOCOL_HTTP_1_1;
+	responseHeader->Code = HTTP::RESPONSE_SWITCHING_PROTOCOLS;
+
+	responseHeader->AddKey("Upgrade", "websocket");
+	responseHeader->AddKey("Connection", "Upgrade");
+	responseHeader->AddKey("Sec-WebSocket-Accept", wsKey);
+//	responseHeader->AddKey("Sec-WebSocket-Extensions", "");
+	responseHeader->AddKey("Sec-WebSocket-Version", "17");
+
+	return WS_RESPONSE_OK;
 }
 
 WS_FRAME_RESULT

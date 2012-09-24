@@ -9,13 +9,11 @@ namespace HTTP
 
 #define HTTP_LINE_ENDING	"\r\n";
 
-ResponseHeaderBuilder::ResponseHeaderBuilder(const RESPONSE_HEADER_DESC* pDesc)
-	: m_Protocol(pDesc->Protocol)
-	, m_Code(pDesc->Code)
-	, m_Method(pDesc->Method)
-	, m_AuthMode(pDesc->AuthMode)
-	, m_AuthRealm(pDesc->AuthRealm ? pDesc->AuthRealm : "")
-	, m_RedirectURI(pDesc->RedirectURI ? pDesc->RedirectURI : "")
+ResponseHeaderBuilder::ResponseHeaderBuilder()
+	: Protocol(PROTOCOL_HTTP_1_1)
+	, Code(RESPONSE_OK)
+	, Method(METHOD_GET)
+	, AuthMode(AUTH_NONE)
 {
 }
 
@@ -37,63 +35,63 @@ ResponseHeaderBuilder::Build(
 {
 	std::stringstream response; 
 	
-	response << ProtocolToString(m_Protocol) << " ";
+	response << ProtocolToString(Protocol) << " ";
 
 	//
 	// Some codes need special cases
 	//
-	if (m_Code == RESPONSE_MOVED ||
-		m_Code == RESPONSE_FOUND)
+	if (Code == RESPONSE_MOVED ||
+		Code == RESPONSE_FOUND)
 	{
-		if (!m_RedirectURI.size())
+		if (!RedirectURI.size())
 		{
 			return RESPONSE_HEADER_NEED_REDIRECT_URI;
 		}
 
 		response 
 			<< "URI: " 
-			<< m_RedirectURI
+			<< RedirectURI
 			<< HTTP_LINE_ENDING;
 	}
-	else if (m_Code == RESPONSE_METHOD)
+	else if (Code == RESPONSE_METHOD)
 	{
-		if (!m_RedirectURI.size())
+		if (!RedirectURI.size())
 		{
 			return RESPONSE_HEADER_NEED_REDIRECT_URI;
 		}
 
 		response 
 			<< "Method: " 
-			<< MethodToString(m_Method) 
+			<< MethodToString(Method) 
 			<< " "
-			<< m_RedirectURI 
+			<< RedirectURI 
 			<< HTTP_LINE_ENDING;
 	}
 	else
 	{
-		response << m_Code << " " << ResponseCodeToString(m_Code) << HTTP_LINE_ENDING;
+		response << Code << " " << ResponseCodeToString(Code) << HTTP_LINE_ENDING;
 	}
 
 	//
 	// If we require authentication, say as much:
 	//
-	if (m_Code == RESPONSE_UNAUTHORISED)
+	if (Code == RESPONSE_UNAUTHORISED)
 	{
-		if (m_AuthMode == AUTH_NONE)
+		if (AuthMode == AUTH_NONE)
 		{
 			return RESPONSE_HEADER_NEED_AUTH_MODE;
 		}
 
-		if (!m_AuthRealm.size())
+		if (!AuthRealm.size())
 		{
 			return RESPONSE_HEADER_NEED_AUTH_REALM;
 		}
 
 		response 
 			<< "WWW-Authenticate: " 
-			<< AuthModeToString(m_AuthMode) 
+			<< AuthModeToString(AuthMode) 
 			<< "Realm=\""
-			<< m_AuthRealm 
+			<< AuthRealm 
 			<< "\"" 
 			<< HTTP_LINE_ENDING;
 	}
