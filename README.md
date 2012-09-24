@@ -15,7 +15,6 @@ Features:
 
 Compatibility:
 
-- The Base64 encoding and decoding was taken from http://www.adp-gmbh.ch/win/misc/webserver.html
 - This code doesn't handle the WebSocket handshake hashing; you'll need to provide your own. See below.
 - This requires C++11.
 - This was written and tested on Windows 8 and Visual Studio 11 Beta.
@@ -24,8 +23,12 @@ Compatibility:
 Disclaimer:
 
 - I release this without any promises of functionality or warranty. 
-- I'm happy to be contacted if you have problems with any of this code.
 - This code is in no way affiliated with or endorsed by Microsoft.
+- I'm happy to be contacted if you have problems with any of this code.
+
+Credits:
+
+- The Base64 encoding and decoding was taken from http://www.adp-gmbh.ch/win/misc/webserver.html
 
 WebSocket Handshake Hashing:
 
