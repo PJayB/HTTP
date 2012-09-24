@@ -215,10 +215,11 @@ ParseKeyValuePair(
 
 	CopyIntoStdString(value, cursor, valueOut);
 
-	if (!ExpectNewLine(cursor)) 
-	{
-		return REQUEST_PARSE_MALFORMED;
-	}
+	ExpectNewLine(cursor);
+	//if (!ExpectNewLine(cursor)) 
+	//{
+	//	return REQUEST_PARSE_MALFORMED;
+	//}
 
 	return REQUEST_PARSE_OK;
 }

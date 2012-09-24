@@ -30,12 +30,19 @@ enum AUTH_MODE
 
 enum RESPONSE_CODE
 {
+	// Informational
+	RESPONSE_CONTINUE = 100,			// Continue (please send body)
+	RESPONSE_SWITCHING_PROTOCOLS = 101,	// Switching Protocols
+	RESPONSE_PROCESSING = 102,			// Processing WebDAV operations
+
 	// Success codes
 	RESPONSE_OK = 200,					// OK
 	RESPONSE_CREATED = 201,				// Created
 	RESPONSE_ACCEPTED = 202,			// Request Accepted
-	RESPONSE_PARTIAL = 203,				// Partially processed
-	RESPONSE_NORESPONSE = 204,			// No response from remote server
+	RESPONSE_NON_AUTHORITATIVE = 203,	// Returning information from untrusted source
+	RESPONSE_NO_CONTENT = 204,			// No content returned by the server
+	RESPONSE_RESET = 205,				// Like 204, but client must reset the view
+	RESPONSE_PARTIAL = 206,				// Partial content being returned
 
 	// Redirection codes
 	RESPONSE_MOVED = 301,				// Response should be "URI: url comment endl"
@@ -69,10 +76,10 @@ enum REQUEST_PARSE_RESULT
 enum RESPONSE_HEADER_RESULT
 {
 	RESPONSE_HEADER_OK,
-	RESPONSE_HEADER_NEED_CONTENT_MIME,
 	RESPONSE_HEADER_NEED_REDIRECT_URI,
 	RESPONSE_HEADER_NEED_AUTH_MODE,
 	RESPONSE_HEADER_NEED_AUTH_REALM,
+	RESPONSE_HEADER_NEED_CONTENT_MIME
 };
 
 enum SAFE_URI_ENCODE
@@ -161,49 +168,62 @@ private:
 struct RESPONSE_HEADER_DESC
 {
 	PROTOCOL Protocol;		// The HTTP protocol to use
+	RESPONSE_CODE Code;		// The response code
+	METHOD Method;			// For RESPONSE_METHOD only.
+	LPCSTR RedirectURI;		// Must specify redirect code to use this
 	AUTH_MODE AuthMode;		// Set to non-None to request credentials
 	LPCSTR AuthRealm;		// Description of the authorization realm
-	RESPONSE_CODE Code;		// The response code
-	LPCSTR ServerName;		// Optional name of server
-	LPCSTR RedirectURI;		// Must specify redirect code to use this
-	METHOD Method;			// For RESPONSE_METHOD only.
-	SIZE_T ContentLength;	// Size of the data in bytes
 };
 
 //
 // This is used to build a stream for sending back data
 // to the browser.
 //
-class ResponseHeader
+class ResponseHeaderBuilder
 {
 public:
 
-	ResponseHeader();
-	~ResponseHeader();
+	ResponseHeaderBuilder(
+		_In_ const RESPONSE_HEADER_DESC* pDesc);
 
-	LPCSTR Content() const;
-	SIZE_T ContentLength() const;
+	ResponseHeaderBuilder& 
+	AddKey(
+		_In_z_ StringRef Key,
+		_In_z_ StringRef Value);
 
 	RESPONSE_HEADER_RESULT 
-	BuildBinaryHeader(
-		_In_ const RESPONSE_HEADER_DESC* pDesc,
+	Build(
+		_Out_ String& Output) const;
+
+	//
+	// Tools for constructing default web responses
+	//
+	RESPONSE_HEADER_RESULT 
+	AddBinaryHeaders(
+		_In_ SIZE_T ContentLength,
 		_In_z_ LPCSTR MimeType);
 
 	RESPONSE_HEADER_RESULT 
-	BuildTextHeader(
-		_In_ const RESPONSE_HEADER_DESC* pDesc,
+	AddTextHeaders(
+		_In_ SIZE_T ContentLength,
 		_In_z_ LPCSTR MimeType,
 		_In_z_ LPCSTR Encoding);
 
 private:
 
-	RESPONSE_HEADER_RESULT 
-	BuildHeader(
-		_In_ const RESPONSE_HEADER_DESC* pDesc,
-		_In_ LPCSTR ContentMimeType);
-
-	String m_Data;
+	PROTOCOL m_Protocol;	
+	RESPONSE_CODE m_Code;	
+	METHOD m_Method;		
+	AUTH_MODE m_AuthMode;
+	String m_AuthRealm;
+	String m_RedirectURI;
+	StringTable m_ExtraLines;
 };
+
+//
+// Utility to generate timestamps
+//
+String TimeStampString();
 
 //
 // Utility function for splitting HTTP-style parameter
@@ -325,4 +345,113 @@ Base64Decode(
 String 
 Base64Decode(
 	_In_ StringRef In);
+
+//
+// WebSockets API
+//
+
+// Returns true if the header looks like a Websocket request
+bool IsWebsocketRequest(
+	_In_ const RequestHeader& req);
+
+enum WS_FRAME_RESULT
+{
+	WS_FRAME_OK,
+	WS_FRAME_ERROR,
+
+	// If you get this, it means you specified/received an OpCode
+	// without FinalPacket set.
+	WS_FRAME_FRAGMENTED_OPCODE
+};
+
+enum WS_FRAME_OPCODE
+{
+	WS_FRAME_OPCODE_CONTINUATION		= 0x0,
+	WS_FRAME_OPCODE_TEXT				= 0x1,
+	WS_FRAME_OPCODE_BINARY				= 0x2,
+	WS_FRAME_OPCODE_CONNECTION_CLOSE	= 0x8,
+	WS_FRAME_OPCODE_PING				= 0x9,
+	WS_FRAME_OPCODE_PONG				= 0xA
+};
+
+enum WS_CLOSE_REASON
+{
+	WS_CLOSE_NORMAL						= 1000,
+	WS_CLOSE_GOING_AWAY					= 1001,
+	WS_CLOSE_PROTOCOL_ERROR				= 1002,
+	WS_CLOSE_NO_DATA_HANDLER			= 1003,
+	// 1004 Reserved
+	// 1005 Reserved
+	// 1006 Reserved
+	WS_CLOSE_INCONSISTENT_DATA			= 1007,
+	WS_CLOSE_VOILATES_POLICY			= 1008,
+	WS_CLOSE_MESSAGE_TOO_LARGE			= 1009,
+	WS_CLOSE_REQUIRES_EXTENSION			= 1010,
+	WS_CLOSE_CANNOT_FULFILL_REQUEST		= 1011
+	// 1012-2999 Reserved
+};
+
+struct WS_FRAME_INFO
+{
+	BYTE FinalPacket					: 1;
+	BYTE RSV1							: 1;
+	BYTE RSV2							: 1;
+	BYTE RSV3							: 1;
+	BYTE Masked							: 1;
+	WS_FRAME_OPCODE OpCode				: 7;
+
+	DWORD MaskingKey;
+	ULONGLONG PayloadLength;
+};
+
+struct WS_PACKED_FRAME_HEADER
+{
+	BYTE Length; 
+	BYTE Data[15];
+};
+
+WS_FRAME_RESULT 
+ParseWebsocketFrame(
+	_In_reads_(DataLength) LPCVOID pData,
+	_In_ ULONGLONG DataLength,
+	_Out_ WS_FRAME_INFO* pFrameInfo,
+	_Out_ LPCVOID* pFramePayload);
+
+WS_FRAME_RESULT
+SetWebsocketFrame(
+	_In_ const WS_FRAME_INFO* pFrameInfo,
+	_Out_ WS_PACKED_FRAME_HEADER* pFrameHeader);
+
+// Utility function for constructing a control frame
+WS_FRAME_RESULT
+SetWebsocketControlFrame(
+	_In_ WS_FRAME_OPCODE OpCode,
+	_In_ ULONGLONG PayloadLength,
+	_Out_ WS_PACKED_FRAME_HEADER* pFrameHeader);
+
+// Utility function for constructing a close frame
+WS_FRAME_RESULT
+SetWebsocketCloseFrame(
+	_In_ WS_CLOSE_REASON Reason,
+	_In_ ULONGLONG PayloadLength,
+	_Out_ WS_PACKED_FRAME_HEADER* pFrameHeader);
+
+// This is synonymous with UnmaskWebsocketFrame, but 
+// is aliased for clarity.
+void 
+MaskWebsocketPayload(
+	_In_reads_(DataLength) LPCVOID pData,
+	_In_ ULONGLONG DataLength,
+	_In_ DWORD MaskingKey,
+	_Out_writes_(DataLength) LPVOID pOutData);
+
+// This is synonymous with MaskWebsocketFrame, but 
+// is aliased for clarity.
+void 
+UnmaskWebsocketPayload(
+	_In_reads_(DataLength) LPCVOID pData,
+	_In_ ULONGLONG DataLength,
+	_In_ DWORD MaskingKey,
+	_Out_writes_(DataLength) LPVOID pOutData);
+
 }

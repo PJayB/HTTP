@@ -7,168 +7,178 @@
 namespace HTTP
 {
 
-ResponseHeader::ResponseHeader()
+#define HTTP_LINE_ENDING	"\r\n";
+
+ResponseHeaderBuilder::ResponseHeaderBuilder(const RESPONSE_HEADER_DESC* pDesc)
+	: m_Protocol(pDesc->Protocol)
+	, m_Code(pDesc->Code)
+	, m_Method(pDesc->Method)
+	, m_AuthMode(pDesc->AuthMode)
+	, m_AuthRealm(pDesc->AuthRealm ? pDesc->AuthRealm : "")
+	, m_RedirectURI(pDesc->RedirectURI ? pDesc->RedirectURI : "")
 {
 }
 
-ResponseHeader::~ResponseHeader()
+ResponseHeaderBuilder& ResponseHeaderBuilder::AddKey(
+	StringRef A,
+	StringRef B)
 {
-}
-
-LPCSTR ResponseHeader::Content() const
-{
-	return m_Data.c_str();
-}
-
-SIZE_T ResponseHeader::ContentLength() const
-{
-	return m_Data.size();
-}
-
-RESPONSE_HEADER_RESULT ResponseHeader::BuildHeader(
-	const RESPONSE_HEADER_DESC* pDesc,
-	LPCSTR ContentMimeType)
-{
-	std::stringstream response;
-
-	m_Data = "";
-
-	//
-	// Validate stuff we definitely require
-	//
-	if (!ContentMimeType || !*ContentMimeType)
+	if (A.size())
 	{
-		return RESPONSE_HEADER_NEED_CONTENT_MIME;
+		m_ExtraLines[A] = B;
 	}
 
-	response << ProtocolToString(pDesc->Protocol) << " ";
+	return *this;
+}
+
+RESPONSE_HEADER_RESULT 
+ResponseHeaderBuilder::Build(
+	String& OutResponse) const
+{
+	std::stringstream response; 
+	
+	response << ProtocolToString(m_Protocol) << " ";
 
 	//
 	// Some codes need special cases
 	//
-	if (pDesc->Code == RESPONSE_MOVED ||
-		pDesc->Code == RESPONSE_FOUND)
+	if (m_Code == RESPONSE_MOVED ||
+		m_Code == RESPONSE_FOUND)
 	{
-		if (!pDesc->RedirectURI || !*pDesc->RedirectURI)
+		if (!m_RedirectURI.size())
 		{
 			return RESPONSE_HEADER_NEED_REDIRECT_URI;
 		}
 
 		response 
 			<< "URI: " 
-			<< pDesc->RedirectURI
-			<< std::endl;
+			<< m_RedirectURI
+			<< HTTP_LINE_ENDING;
 	}
-	else if (pDesc->Code == RESPONSE_METHOD)
+	else if (m_Code == RESPONSE_METHOD)
 	{
-		if (!pDesc->RedirectURI || !*pDesc->RedirectURI)
+		if (!m_RedirectURI.size())
 		{
 			return RESPONSE_HEADER_NEED_REDIRECT_URI;
 		}
 
 		response 
 			<< "Method: " 
-			<< MethodToString(pDesc->Method) 
+			<< MethodToString(m_Method) 
 			<< " "
-			<< pDesc->RedirectURI 
-			<< std::endl;
+			<< m_RedirectURI 
+			<< HTTP_LINE_ENDING;
 	}
 	else
 	{
-		response << ResponseCodeToString(pDesc->Code) << std::endl;
+		response << m_Code << " " << ResponseCodeToString(m_Code) << HTTP_LINE_ENDING;
 	}
 
 	//
 	// If we require authentication, say as much:
 	//
-	if (pDesc->Code == RESPONSE_UNAUTHORISED)
+	if (m_Code == RESPONSE_UNAUTHORISED)
 	{
-		if (pDesc->AuthMode == AUTH_NONE)
+		if (m_AuthMode == AUTH_NONE)
 		{
 			return RESPONSE_HEADER_NEED_AUTH_MODE;
 		}
 
-		if (!pDesc->AuthRealm || !*pDesc->AuthRealm)
+		if (!m_AuthRealm.size())
 		{
 			return RESPONSE_HEADER_NEED_AUTH_REALM;
 		}
 
 		response 
 			<< "WWW-Authenticate: " 
-			<< AuthModeToString(pDesc->AuthMode) 
+			<< AuthModeToString(m_AuthMode) 
 			<< "Realm=\""
-			<< pDesc->AuthRealm 
+			<< m_AuthRealm 
 			<< "\"" 
-			<< std::endl;
+			<< HTTP_LINE_ENDING;
 	}
 
 	//
-	// Append the date and time
+	// Add the keys
 	//
+	for (auto pair : m_ExtraLines)
 	{
-		struct tm timeinfo;
-		time_t rawtime;
-
-		time(&rawtime);
-		localtime_s(&timeinfo, &rawtime);
-
-		char time_str[256];
-		asctime_s(time_str, sizeof(time_str), &timeinfo);
-
-		response 
-			<< "Date: " 
-			<< time_str;
+		response << pair.first << ":";
+		if (pair.second.size())
+			response << " " << pair.second;
+		response << HTTP_LINE_ENDING;
 	}
 
-	//
-	// Server name
-	//
-	if (pDesc->ServerName)
-	{
-		response << "Server: " << pDesc->ServerName << std::endl;
-	}
+	// Terminating line break
+	response << HTTP_LINE_ENDING;
 
-	response << "Connection: close" << std::endl;
-
-	//
-	// Encoding for the content
-	//
-	response << "Content-Type: " << ContentMimeType << std::endl;
-	response << "Content-Length: " << pDesc->ContentLength << std::endl;
-
-
-	//
-	// Copy the header now.
-	//
-	response << std::endl;
-
-	m_Data = response.str();
+	OutResponse = response.str();
 
 	return RESPONSE_HEADER_OK;
 }
 
-RESPONSE_HEADER_RESULT ResponseHeader::BuildBinaryHeader(
-	const RESPONSE_HEADER_DESC* pDesc,
-	LPCSTR MimeType)
+String IntToStr(SIZE_T T)
 {
-	return BuildHeader(
-		pDesc, 
-		MimeType);
+	std::stringstream s;
+	s << T;
+	return s.str();
 }
 
-RESPONSE_HEADER_RESULT ResponseHeader::BuildTextHeader(
-	const RESPONSE_HEADER_DESC* pDesc,
+RESPONSE_HEADER_RESULT ResponseHeaderBuilder::AddBinaryHeaders(
+	SIZE_T ContentLength,
+	LPCSTR MimeType)
+{
+	if (!MimeType || !*MimeType)
+	{
+		return RESPONSE_HEADER_NEED_CONTENT_MIME;
+	}
+
+	AddKey("Content-Type", MimeType);
+	AddKey("Content-Length", IntToStr(ContentLength));
+	AddKey("Connection", "close");
+
+	return RESPONSE_HEADER_OK;
+}
+
+RESPONSE_HEADER_RESULT ResponseHeaderBuilder::AddTextHeaders(
+	SIZE_T ContentLength,
 	LPCSTR MimeType,
 	LPCSTR Encoding)
 {
-	std::string mimeAndEncoding = MimeType;
+	if (!MimeType || !*MimeType ||
+		!Encoding || !*Encoding)
+	{
+		return RESPONSE_HEADER_NEED_CONTENT_MIME;
+	}
+
+	String mimeAndEncoding = MimeType;
 
 	mimeAndEncoding += "; ";
 	mimeAndEncoding += Encoding;
 
-	return BuildHeader(
-		pDesc, 
-		mimeAndEncoding.c_str());
+	AddKey("Content-Type", mimeAndEncoding);
+	AddKey("Content-Length", IntToStr(ContentLength));
+	AddKey("Connection", "close");
+
+	return RESPONSE_HEADER_OK;
+}
+
+String TimeStampString()
+{
+ 	struct tm timeinfo;
+	time_t rawtime;
+
+	time(&rawtime);
+	localtime_s(&timeinfo, &rawtime);
+
+	char time_str[256];
+	asctime_s(time_str, sizeof(time_str), &timeinfo);
+
+	// chop of \n
+	size_t len = strlen(time_str);
+	time_str[len-1] = 0;
+
+	return time_str;
 }
 
 }

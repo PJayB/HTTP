@@ -52,59 +52,66 @@ LPCSTR AuthModeToString(AUTH_MODE a)
 
 LPCSTR ResponseCodeToString(RESPONSE_CODE r)
 {
-	LPCSTR codesz = nullptr;
-
 	switch ( r )
 	{
+	// Informational
+	case RESPONSE_CONTINUE:
+		return "Continue"; 
+	case RESPONSE_SWITCHING_PROTOCOLS:
+		return "Switching Protocols";
+	case RESPONSE_PROCESSING:
+		return "Processing";
+
 	// Success codes
 	case RESPONSE_OK:
+		return "OK"; 
 	case RESPONSE_CREATED:
+		return "Created"; 
 	case RESPONSE_ACCEPTED:
-		codesz = "OK"; break;
-
+		return "Accepted"; 
+	case RESPONSE_NON_AUTHORITATIVE:
+		return "Non-Authoritative Information";
+	case RESPONSE_NO_CONTENT:
+		return "No Content";
+	case RESPONSE_RESET:
+		return "Reset Content";
 	case RESPONSE_PARTIAL:
-		codesz = "Partial Data"; break;
-	case RESPONSE_NORESPONSE:
-		codesz = "No Response"; break;
+		return "Partial Content";
 
 	// Redirection codes
 	case RESPONSE_MOVED:
 	case RESPONSE_FOUND:
-		//codesz = "URI: "; 
-		break;
+		//return "URI: "; 
 
 	case RESPONSE_METHOD:
-		//codesz = "Method: "; 
-		break;
+		//return "Method: "; 
 
 	case RESPONSE_NOTMODIFIED:
-		codesz = ""; break;
+		return ""; 
 
 	// Client error
 	case RESPONSE_BADREQUEST:
-		codesz = "Bad Request"; break;
+		return "Bad Request"; 
 	case RESPONSE_UNAUTHORISED:
-		codesz = "Unauthorized"; break;
+		return "Unauthorized"; 
 	case RESPONSE_PAYMENTREQUIRED:
-		codesz = "Payment Required"; break;
+		return "Payment Required"; 
 	case RESPONSE_FORBIDDEN:
-		codesz = "Forbidden"; break;
+		return "Forbidden"; 
 	case RESPONSE_NOTFOUND:
-		codesz = "Not Found"; break;
+		return "Not Found"; 
 
 	// Server error
 	case RESPONSE_NOTIMPL:
-		codesz = "Not Implemented"; break;
+		return "Not Implemented"; 
 	case RESPONSE_TOOBUSY:
-		codesz = "Server Busy"; break;
+		return "Server Busy"; 
 	case RESPONSE_GATEWAYTIMEOUT:
-		codesz = "Gateway Time-Out"; break;
+		return "Gateway Time-Out"; 
 
 	default:
-		break;
+		return nullptr;
 	}
-
-	return codesz;
 }
 
 }
