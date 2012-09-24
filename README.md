@@ -23,7 +23,7 @@ Disclaimer:
 
 - I release this without any promises of functionality or warranty. 
 - I'm happy to be contacted if you have problems with any of this code.
-- This code is in no way affiliated with or edorsed by Microsoft.
+- This code is in no way affiliated with or endorsed by Microsoft.
 
 WebSocket Handshake Hashing:
 
@@ -31,7 +31,7 @@ Currently I'm using a third party hashing library that isn't mine to distribute,
 
 Integrate it with this library by using the following code to build your response to the Websocket handshake:
 
-	HTTP::HashFunc hashFunc = [] (const char* pStrIn, UINT* pHashOut)
+	HTTP::HashFunc hashFunc = [] (LPCSTR pStrIn, LPUINT pHashOut)
 	{
 		SHA1 hash;
 		hash << pStrIn;

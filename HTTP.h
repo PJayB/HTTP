@@ -353,7 +353,7 @@ bool IsWebsocketRequest(
 
 // This takes in a string and generates a 160-bit SHA1 hash, returned through
 // 5 UINTs.
-typedef std::function<void (const char*, UINT*)> HashFunc;
+typedef std::function<void (LPCSTR, LPUINT)> HashFunc;
 
 WS_RESPONSE_RESULT
 BuildWebsocketRequestResponse(
