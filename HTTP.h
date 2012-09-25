@@ -4,6 +4,13 @@
 #include <map>
 #include <functional>
 
+#ifdef _WIN32
+#	include <SDKDDKVer.h>
+#	include <Windows.h>
+#else
+#	error Good luck.
+#endif
+
 namespace HTTP
 {
 

@@ -1,5 +1,5 @@
-#include "stdafx.h"
 #include "HTTP.h"
+#include <assert.h>
 
 namespace HTTP
 {
@@ -30,7 +30,9 @@ template<class T> T ByteSwap(T original)
 
 bool IsWebsocketRequest(_In_ const RequestHeader& req)
 {
-	return req.Header().find("Sec-WebSocket-Key") != std::end(req.Header());
+	return 
+		req.Header().find("Upgrade") != std::end(req.Header()) &&
+		req.Header().find("Sec-WebSocket-Key") != std::end(req.Header());
 }
 
 WS_RESPONSE_RESULT

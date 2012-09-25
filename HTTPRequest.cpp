@@ -1,5 +1,5 @@
-#include "stdafx.h"
 #include "HTTP.h"
+#include <assert.h>
 
 #include <stdio.h>
 #include <string>
@@ -93,7 +93,7 @@ void CopyIntoStdString(const char* begin, const char* end, String& out)
 
 String GetWord(const char*& cursor)
 {
-	ASSERT(!isspace(*cursor));
+	assert(!isspace(*cursor));
 
 	const char* begin = cursor;
 
@@ -466,7 +466,7 @@ bool IsHexDigit(BYTE c)
 
 BYTE HexValue(BYTE c)
 {
-	ASSERT(IsHexDigit(c));
+	assert(IsHexDigit(c));
 
 	if (c >= '0' && c <= '9')
 	{
@@ -481,8 +481,6 @@ BYTE HexValue(BYTE c)
 		return c - 'A' + 10;
 	}
 
-	// Should never get here.
-	ASSERT(0);
 	return 0;
 }
 
@@ -546,7 +544,7 @@ bool IsAlphaNumeric(CHAR c)
 
 BYTE ToHex(BYTE c)
 {
-	ASSERT(c <= 0xF);
+	assert(c <= 0xF);
 
 	if (c < 10) { return c + '0'; }
 	else { return c - 10 + 'A'; }
@@ -594,7 +592,6 @@ bool CharIsEligibleForEncode(CHAR c, SAFE_URI_ENCODE EncodeType)
 		return !IsAlphaNumeric(c);
 	};
 
-	ASSERT(0);
 	return false;
 }
 

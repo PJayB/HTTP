@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "HTTP.h"
 
 namespace HTTP
